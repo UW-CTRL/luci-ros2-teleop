@@ -15,11 +15,12 @@ setup(
     zip_safe=True,
     maintainer='josh',
     maintainer_email='josh@luci.com',
-    description='TODO: Package description',
-    license='TODO: License declaration',
+    description='Drive LUCI from your keyboard',
+    license='TODO',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'keyboard_control = teleop_py.keyboard_control:main',
         ],
     },
 )

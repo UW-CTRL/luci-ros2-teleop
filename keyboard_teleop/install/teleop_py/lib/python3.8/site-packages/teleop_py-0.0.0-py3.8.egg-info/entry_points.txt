@@ -1,0 +1,3 @@
+[console_scripts]
+keyboard_control = teleop_py.keyboard_control:main
+
