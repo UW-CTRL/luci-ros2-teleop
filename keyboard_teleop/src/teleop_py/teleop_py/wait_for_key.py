@@ -1,10 +1,3 @@
-import rclpy
-from rclpy.node import Node
-
-from std_msgs.msg import String
-import sys
-
-
 # https://stackoverflow.com/questions/983354/how-do-i-wait-for-a-pressed-key
 
 
@@ -63,43 +56,3 @@ def read_single_keypress():
         termios.tcsetattr(fd, termios.TCSAFLUSH, attrs_save)
         fcntl.fcntl(fd, fcntl.F_SETFL, flags_save)
     return tuple(ret)
-
-
-
-class MinimalPublisher(Node):
-
-    def __init__(self):
-        super().__init__('keyboard_comands')
-        self.publisher_ = self.create_publisher(String, 'key_string', 10)
-        timer_period = 0.05  # seconds
-        self.timer = self.create_timer(timer_period, self.timer_callback)
-        self.i = 0
-
-    def timer_callback(self):
-        msg = String()
-        msg.data = str(read_single_keypress())
-        if msg.data == "('q',)" or msg.data == r"('\x03',)":
-            msg.data = msg.data + " quit command"
-            self.publisher_.publish(msg)
-            sys.exit("\n I quit")
-        self.publisher_.publish(msg)
-        self.get_logger().info('Publishing: {}'.format(msg.data))
-        self.i += 1
-
-
-def main(args=None):
-    rclpy.init(args=args)
-
-    minimal_publisher = MinimalPublisher()
-
-    rclpy.spin(minimal_publisher)
-
-    # Destroy the node explicitly
-    # (optional - otherwise it will be done automatically
-    # when the garbage collector destroys the node object)
-    minimal_publisher.destroy_node()
-    rclpy.shutdown()
-
-
-if __name__ == '__main__':
-    main()
