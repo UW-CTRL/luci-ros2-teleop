@@ -1,15 +1,12 @@
 import rclpy
 from rclpy.node import Node
-
-from std_msgs.msg import String
+from luci_messages.msg import LuciJoystick
 import sys
 
 
-# https://stackoverflow.com/questions/983354/how-do-i-wait-for-a-pressed-key
-
-
 def read_single_keypress():
-    """Waits for a single keypress on stdin.
+    """ https://stackoverflow.com/questions/983354/how-do-i-wait-for-a-pressed-key
+    Waits for a single keypress on stdin.
 
     This is a silly function to call if you need to do it a lot because it has
     to store stdin's current setup, setup stdin for reading single keystrokes
@@ -65,25 +62,44 @@ def read_single_keypress():
     return tuple(ret)
 
 
-
 class MinimalPublisher(Node):
 
     def __init__(self):
         super().__init__('keyboard_comands')
-        self.publisher_ = self.create_publisher(String, 'key_string', 10)
+        self.publisher_ = self.create_publisher(LuciJoystick, 'joystick_topic', 10)
         timer_period = 0.05  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.i = 0
 
     def timer_callback(self):
-        msg = String()
-        msg.data = str(read_single_keypress())
-        if msg.data == "('q',)" or msg.data == r"('\x03',)":
-            msg.data = msg.data + " quit command"
-            self.publisher_.publish(msg)
+        keyboard_data = str(read_single_keypress())
+        print(keyboard_data)
+        if keyboard_data == "('q',)" or keyboard_data == r"('\x03',)":
             sys.exit("\n I quit")
+        msg = LuciJoystick()
+        # UP
+        if keyboard_data == r"('\x1b', '[', 'A')":
+            msg.forward_back = 30
+            msg.left_right = 0
+        # DOWN
+        elif keyboard_data == r"('\x1b', '[', 'B')":
+            msg.forward_back = -30
+            msg.left_right = 0
+        # LEFT
+        elif keyboard_data == r"('\x1b', '[', 'D')":
+            msg.forward_back = 0
+            msg.left_right = -30
+        # RIGHT
+        elif keyboard_data == r"('\x1b', '[', 'C')":
+            msg.forward_back = 0
+            msg.left_right = 30
+        else:
+            msg.forward_back = 0
+            msg.left_right = 0
+
         self.publisher_.publish(msg)
-        self.get_logger().info('Publishing: {}'.format(msg.data))
+        self.get_logger().info('Publishing: {} {}'.format(msg.forward_back,
+                                                          msg.left_right))
         self.i += 1
 
 
