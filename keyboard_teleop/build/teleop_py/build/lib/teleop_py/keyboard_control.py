@@ -78,24 +78,24 @@ class MinimalPublisher(Node):
             sys.exit("\n I quit")
         msg = LuciJoystick()
         # UP
-        if keyboard_data == r"('\x1b', '[', 'A')":
-            msg.forward_back = 30
+        if r"'\x1b', '[', 'A'" in keyboard_data:
+            msg.forward_back = 40
             msg.left_right = 0
         # DOWN
-        elif keyboard_data == r"('\x1b', '[', 'B')":
-            msg.forward_back = -30
+        if r"'\x1b', '[', 'B'" in keyboard_data:
+            msg.forward_back = -40
             msg.left_right = 0
         # LEFT
-        elif keyboard_data == r"('\x1b', '[', 'D')":
+        if r"'\x1b', '[', 'D'" in keyboard_data:
             msg.forward_back = 0
-            msg.left_right = -30
+            msg.left_right = -50
         # RIGHT
-        elif keyboard_data == r"('\x1b', '[', 'C')":
+        if r"'\x1b', '[', 'C'" in keyboard_data:
             msg.forward_back = 0
-            msg.left_right = 30
-        else:
-            msg.forward_back = 0
-            msg.left_right = 0
+            msg.left_right = 50
+        # else:
+        #     msg.forward_back = 0
+        #     msg.left_right = 0
 
         self.publisher_.publish(msg)
         self.get_logger().info('Publishing: {} {}'.format(msg.forward_back,
@@ -119,3 +119,8 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
+
+
+# ^[[A^[[A('\x1b', '[', 'A', '\x1b', '[', 'A')
+# ^[[A('\x1b', '[', 'A')
+# ('\x1b', '[', 'A')
