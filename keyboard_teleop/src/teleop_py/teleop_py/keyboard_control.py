@@ -71,8 +71,8 @@ class KeyboardPublisher(Node):
         # Publish joystick commands
         self.publisher_.publish(msg)
         self.get_logger().info('dir: {} | Publishing: {} {}'.format(dir_char,
-                                                                  msg.forward_back,
-                                                                  msg.left_right))
+                                                                    msg.forward_back,
+                                                                    msg.left_right))
 
 
 def main(args=None):
