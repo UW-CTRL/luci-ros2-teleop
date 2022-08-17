@@ -1,5 +1,8 @@
 # https://stackoverflow.com/questions/983354/how-do-i-wait-for-a-pressed-key
-
+import termios
+import fcntl
+import os
+import sys
 
 def read_single_keypress():
     """Waits for a single keypress on stdin.
@@ -15,10 +18,6 @@ def read_single_keypress():
     handled.
 
     """
-    import termios
-    import fcntl
-    import os
-    import sys
     fd = sys.stdin.fileno()
     # save old state
     flags_save = fcntl.fcntl(fd, fcntl.F_GETFL)
