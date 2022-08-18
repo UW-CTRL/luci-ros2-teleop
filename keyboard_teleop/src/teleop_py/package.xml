@@ -3,9 +3,9 @@
 <package format="3">
   <name>teleop_py</name>
   <version>0.0.0</version>
-  <description>Drive LUCI from your keyboard</description>
+  <description>An example node that can be used to drive LUCI using the arrow keys on your keyboard. ctrl+c or q to terminate. Compatible with Linux.</description>
   <maintainer email="josh@luci.com">josh</maintainer>
-  <license>TODO</license>
+  <license>Apache License 2.0</license>
   <exec_depend>rclpy</exec_depend>
   <exec_depend>std_msgs</exec_depend>
   <test_depend>ament_copyright</test_depend>

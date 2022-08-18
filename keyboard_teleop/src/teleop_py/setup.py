@@ -15,8 +15,8 @@ setup(
     zip_safe=True,
     maintainer='josh',
     maintainer_email='josh@luci.com',
-    description='Drive LUCI from your keyboard',
-    license='TODO',
+    description='An example node that can be used to drive LUCI using the arrow keys on your keyboard. ctrl+c or q to terminate. Compatible with Linux.',
+    license='Apache License 2.0',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
