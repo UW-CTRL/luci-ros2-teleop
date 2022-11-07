@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>teleop_py</name>
-  <version>0.0.0</version>
+  <name>luci_basic_teleop</name>
+  <version>0.1.0</version>
   <description>An example node that can be used to drive LUCI using the arrow keys on your keyboard. ctrl+c or q to terminate. Compatible with Linux.</description>
   <maintainer email="josh@luci.com">josh</maintainer>
   <license>Apache License 2.0</license>

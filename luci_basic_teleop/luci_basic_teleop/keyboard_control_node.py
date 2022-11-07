@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from luci_messages.msg import LuciJoystick
-from teleop_py.wait_for_key import read_single_keypress
+from luci_basic_teleop.wait_for_key import read_single_keypress
 import sys
 
 UP_KEY_MAX = 100
@@ -19,8 +19,9 @@ q_KEY_STRING = r"('q',)"
 class KeyboardPublisher(Node):
 
     def __init__(self):
-        super().__init__('keyboard_comands')
-        self.publisher_ = self.create_publisher(LuciJoystick, 'joystick_topic', 10)
+        super().__init__('keyboard_control_node')
+        self.publisher_ = self.create_publisher(
+            LuciJoystick, 'joystick_topic', 10)
         timer_period = 0.05  # Seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
 
@@ -54,7 +55,7 @@ class KeyboardPublisher(Node):
         elif LEFT_KEY_STRING in keyboard_data:
             msg.forward_back = 0
             # negative number goes left
-            msg.left_right = -1 * LR_KEY_MAX    
+            msg.left_right = -1 * LR_KEY_MAX
             dir_char = 'L'
 
         # RIGHT -> Right turn
@@ -62,7 +63,7 @@ class KeyboardPublisher(Node):
             msg.forward_back = 0
             msg.left_right = 50
             dir_char = 'R'
-        
+
         # All other input wil stop the motors
         else:
             msg.forward_back = 0

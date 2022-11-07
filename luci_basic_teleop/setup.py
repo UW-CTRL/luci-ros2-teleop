@@ -1,10 +1,10 @@
 from setuptools import setup
 
-package_name = 'teleop_py'
+package_name = 'luci_basic_teleop'
 
 setup(
     name=package_name,
-    version='0.0.0',
+    version='0.1.0',
     packages=[package_name],
     data_files=[
         ('share/ament_index/resource_index/packages',
@@ -20,7 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'keyboard_control = teleop_py.keyboard_control:main',
+            'keyboard_control_node = luci_basic_teleop.keyboard_control_node:main',
         ],
     },
 )
