@@ -3,6 +3,8 @@ from rclpy.node import Node
 from luci_messages.msg import LuciJoystick
 from luci_basic_teleop.wait_for_key import read_single_keypress
 import sys
+from std_msgs.msg import String
+
 
 UP_KEY_MAX = 100
 DOWN_KEY_MAX = -100
@@ -21,7 +23,9 @@ class KeyboardPublisher(Node):
     def __init__(self):
         super().__init__('keyboard_control_node')
         self.publisher_ = self.create_publisher(
-            LuciJoystick, 'joystick_topic', 10)
+            LuciJoystick, 'luci/remote_joystick', 10)
+        self.mode_publisher_ = self.create_publisher(
+            String, 'luci/drive_mode', 1)
         timer_period = 0.05  # Seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
 
@@ -80,6 +84,9 @@ def main(args=None):
     rclpy.init(args=args)
 
     keyboard_publisher = KeyboardPublisher()
+    mode_msg = String()
+    mode_msg.data = "Auto"
+    keyboard_publisher.mode_publisher_.publish(mode_msg)
 
     rclpy.spin(keyboard_publisher)
 
