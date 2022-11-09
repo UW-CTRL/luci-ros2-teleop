@@ -24,5 +24,5 @@ This node was created to communicate with the `luci_grpc_interface`
 
 | Topics | Subscription / Publish | Message Type | Description |
 |--------|------------------------|--------------|-------------|
-| joystick_topic | publish | luci_messages::msg::LuciJoystick | The remote JS values that are processed by LUCI for remote drive operations
+| luci/remote_joystick | publish | luci_messages::msg::LuciJoystick | The remote JS values that are processed by LUCI for remote drive operations
 
