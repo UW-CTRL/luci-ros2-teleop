@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from luci_messages.msg import LuciJoystick
+from luci_messages.msg import LuciJoystick, LuciDriveMode
 from luci_basic_teleop.wait_for_key import read_single_keypress
 import sys
 from std_msgs.msg import String
@@ -8,7 +8,7 @@ from std_msgs.msg import String
 
 UP_KEY_MAX = 100
 DOWN_KEY_MAX = -100
-LR_KEY_MAX = 50
+LR_KEY_MAX = 100
 
 UP_KEY_STRING = r"'\x1b', '[', 'A'"
 DOWN_KEY_STRING = r"'\x1b', '[', 'B'"
@@ -25,7 +25,7 @@ class KeyboardPublisher(Node):
         self.publisher_ = self.create_publisher(
             LuciJoystick, 'luci/remote_joystick', 10)
         self.mode_publisher_ = self.create_publisher(
-            String, 'luci/drive_mode', 1)
+            LuciDriveMode, 'luci/drive_mode', 1)
         timer_period = 0.05  # Seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
 
@@ -65,7 +65,7 @@ class KeyboardPublisher(Node):
         # RIGHT -> Right turn
         elif RIGHT_KEY_STRING in keyboard_data:
             msg.forward_back = 0
-            msg.left_right = 50
+            msg.left_right = LR_KEY_MAX
             dir_char = 'R'
 
         # All other input wil stop the motors
@@ -84,8 +84,8 @@ def main(args=None):
     rclpy.init(args=args)
 
     keyboard_publisher = KeyboardPublisher()
-    mode_msg = String()
-    mode_msg.data = "Auto"
+    mode_msg = LuciDriveMode()
+    mode_msg.mode = LuciDriveMode.AUTO
     keyboard_publisher.mode_publisher_.publish(mode_msg)
 
     rclpy.spin(keyboard_publisher)
