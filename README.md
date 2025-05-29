@@ -26,19 +26,19 @@ After correctly sourcing ROS2, Run the following to start the node:
 ## How to build and run this package ##
 Put this package into the src folder of your ros2 workspace. Your workspace should at least have these three packages:
 ```bash
-ros_ws/
-   |-luci-ros2/
-       |-src/
-          |-luci-ros2-keyboard-teleop
-          |-luci-ros2-grpc
-          |-luci-ros2-msgs
+ros_ws
+└──luci-ros2
+    └── src (Use colcon build at this level)
+        ├── luci-ros2-keyboard-teleop
+        ├── luci-ros2-grpc
+        └── luci-ros2-msgs
 ```
 
 If your workspace doesn't look like this, go to https://github.com/lucimobility/luci-ros2-sdk to install all the SDK Dependancies
 
 ### LUCI SDK Package Dependencies ###
--[luci-ros2-grpc](https://github.com/lucimobility/luci-ros2-grpc)  
--[luci-ros2-msgs](https://github.com/lucimobility/luci-ros2-msgs)
+- [luci-ros2-grpc](https://github.com/lucimobility/luci-ros2-grpc)
+- [luci-ros2-msgs](https://github.com/lucimobility/luci-ros2-msgs)
 
 
 ### Build Steps ###
