@@ -6,17 +6,23 @@
   <description>An example node that can be used to drive LUCI using the arrow keys on your keyboard. ctrl+c or q to terminate. Compatible with Linux.</description>
   <maintainer email="josh@luci.com">josh</maintainer>
   <license>Apache License 2.0</license>
+
   <exec_depend>rclpy</exec_depend>
   <exec_depend>std_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+
   <!-- Note not including the luci_message package here as its easier to build without it needing to be in rosdep -->
   <!-- <depend>luci_messages</depend> -->
+
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>
   <test_depend>python3-pytest</test_depend>
 
-
   <export>
     <build_type>ament_python</build_type>
   </export>
 </package>
+  
