@@ -59,9 +59,9 @@ If your workspace doesn't look like this, go to https://github.com/lucimobility/
 1. In another terminal, navigate to your workspace.
 2. run `source install/setup.bash`
 3. run `ros2 run luci_basic_teleop keyboard_control_node` or `ros2 run luci_basic_teloep controller_control_node`
-    - **3a** launch files are available but if not in lab, the ip address must be changed in the bringup launch folder
+    - launch files are available but if not in lab, the ip address must be changed in the bringup launch folder
 4. Use the arrow keys in this terminal to control the chair.
-    - **4a** if using the controller you must also open a new terminal and run `ros2 run joy joy_node` 
+    - if using the controller you must also open a new terminal and run `ros2 run joy joy_node` 
 
 
 ### Usage ###
