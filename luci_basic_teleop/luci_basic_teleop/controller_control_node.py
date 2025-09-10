@@ -3,7 +3,7 @@ from rclpy.node import Node
 from luci_messages.msg import LuciJoystick
 from sensor_msgs.msg import Joy
 import sys
-from std_msgs.msg import String
+from std_msgs.msg import String, Int32
 from std_srvs.srv import Empty
 import signal, time
 
@@ -30,11 +30,25 @@ class ControllerPublisher(Node):
         while not self.set_auto_input_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('Waiting for /luci/set_auto_remote_input service...')
         
+        # Override button subscriber 
+        self.override_subscriber = self.create_subscription(
+            Int32,
+            '/luci/override_button_press_count_data',
+            self.override_callback,
+            10)
+        
+        # Contorller subscriber
         self.joy_subscriber = self.create_subscription(
             Joy,
             '/joy',
             self.joy_callback,
             10)
+        
+        # Button States
+        self.override_state = False
+        self.drive_enabled = False
+        self.b_button_prev = 0
+        self.right_trigger_prev = 0
         self.set_auto_service() #enable auto remote input
     
     def set_auto_service(self):
@@ -57,16 +71,37 @@ class ControllerPublisher(Node):
         except Exception as e:
             self.get_logger().error(f'Service call failed: {e}')
 
+    # How to interact with LUCI override button 
+    def override_callback(self, override_msg:Int32):
+        if override_msg.data == 1:
+            self.override_state = not self.override_state
+
+            if self.override_state:
+                ControllerPublisher.rm_auto_service(self)
+            else:
+                ControllerPublisher.set_auto_service(self)
+
+
+        
+
+
+
     def joy_callback(self, joy_msg: Joy):
         msg = LuciJoystick()
         msg.input_source = REMOTE
 
         forward_back_axis = joy_msg.axes[1]  # Left stick Y
         left_right_axis = joy_msg.axes[0]   # Left stick X
+        right_trigger = joy_msg.axes[5]
+        b_button = joy_msg.buttons[1]
 
-        drive_enabled = True
+        if right_trigger and b_button and not self.override_state:
+            self.drive_enabled = not self.drive_enabled
+        self.a_button_prev = b_button
+        self.right_trigger_prev = right_trigger
 
-        if drive_enabled:
+
+        if self.drive_enabled:
             msg.forward_back = int(forward_back_axis * UP_KEY_MAX)
             msg.left_right = int(-left_right_axis * LR_KEY_MAX)
 
