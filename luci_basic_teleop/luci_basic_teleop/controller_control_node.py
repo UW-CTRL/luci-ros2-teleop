@@ -49,12 +49,12 @@ class ControllerPublisher(Node):
             10)
         
         
-        # # Override button subscriber 
-        # self.override_subscriber = self.create_subscription(
-        #     Int32,
-        #     '/luci/override_button_press_count_data',
-        #     self.override_callback,
-        #     10)
+        # Override button subscriber 
+        self.override_subscriber = self.create_subscription(
+            Int32,
+            '/luci/override_button_press_count_data',
+            self.override_callback,
+            10)
         
         # Contorller subscriber
         self.joy_subscriber = self.create_subscription(
@@ -65,7 +65,7 @@ class ControllerPublisher(Node):
         
         # Button States
         self.mode = State.IDLE
-        self.override_state = False
+        self.override_data = 0
         self.drive_enabled = False
         self.b_button_prev = 0
         self.right_trigger_prev = 0
@@ -102,24 +102,33 @@ class ControllerPublisher(Node):
             self.get_logger().info('Service call succeeded!')
         except Exception as e:
             self.get_logger().error(f'Service call failed: {e}')
+    
+    # How to interact with LUCI override button 
+    def override_callback(self, override_msg:Int32):
+        self.override_data = override_msg.data
 
+        # if override_msg.data == 1:
+        #     self.mode = State.OVERRIDE
+
+        # if self.mode == State.OVERRIDE:
+        #     ControllerPublisher.rm_shared_service(self)
+        # else:
+        #     ControllerPublisher.set_shared_service(self)
+    
     def joystick_callback(self, joystick_msg:LuciJoystick):
-        if joystick_msg.joystick_zone != 8 and self.mode != State.OVERRIDE:
+        if joystick_msg.joystick_zone != 8:
             self.mode = State.OVERRIDE
             ControllerPublisher.rm_shared_service(self)
         elif joystick_msg.joystick_zone == 8 and self.mode == State.OVERRIDE:
             self.mode = State.IDLE
             ControllerPublisher.set_shared_service(self)
-    
-    # # How to interact with LUCI override button 
-    # def override_callback(self, override_msg:Int32):
-    #     if override_msg.data == 1:
-    #         self.mode = State.OVERRIDE
+        self.get_logger().info('Override: {} Mode: {} joystick_zone: {}'.format(self.override_data, self.mode, joystick_msg.joystick_zone))
 
-    #     if self.mode == State.OVERRIDE:
-    #         ControllerPublisher.rm_shared_service(self)
-    #     else:
-    #         ControllerPublisher.set_shared_service(self)
+    
+
+
+    # ADD BUTTON FOR JUST MOVE FORWARD 
+
 
 
     def joy_callback(self, joy_msg: Joy):
@@ -132,10 +141,21 @@ class ControllerPublisher(Node):
         b_button = joy_msg.buttons[1]
 
         if right_trigger and b_button and self.mode != State.CONTROLLED and self.mode == State.IDLE:
-            self.drive_enabled = not self.drive_enabled
             self.mode = State.CONTROLLED
+            b_button = 0
+            right_trigger = 0
+
+        elif right_trigger and b_button and self.mode == State.CONTROLLED:
+            self.mode = State.IDLE
+            b_button = 0
+            right_trigger = 0
+
         self.a_button_prev = b_button
         self.right_trigger_prev = right_trigger
+
+        # if right_trigger == self.right_trigger_prev and b_button == self.b_button_prev and self.mode == State.CONTROLLED:
+        #     self.mode = State.IDLE
+
 
 
         if self.mode == State.CONTROLLED:
@@ -164,7 +184,7 @@ class ControllerPublisher(Node):
             dir_char = '-'
 
         self.publisher_.publish(msg)
-        self.get_logger().info('dir: {} js_zone:{}| Publishing: {} {}'.format(dir_char, msg.joystick_zone, msg.forward_back, msg.left_right))
+        # self.get_logger().info('dir: {} js_zone:{}| Publishing: {} {}'.format(dir_char, msg.joystick_zone, msg.forward_back, msg.left_right))
 
 
 def main(args=None):
