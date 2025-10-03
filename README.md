@@ -31,7 +31,8 @@ ros_ws
         └── src 
             ├── luci-ros2-keyboard-teleop
             ├── luci-ros2-grpc
-            └── luci-ros2-msgs
+            ├── luci-ros2-msgs
+            └── luci-ros2-bringup
 ```
 
 If your workspace is missing these packages, follow the instructions in the [LUCI ROS2 SDK repository](https://github.com/lucimobility/luci-ros2-sdk) to install all dependencies.
@@ -40,6 +41,7 @@ If your workspace is missing these packages, follow the instructions in the [LUC
 - [luci-ros2-grpc](https://github.com/UW-CTRL/luci-ros2-grpc): Handles gRPC communication with LUCI.
 - [luci-ros2-msgs](https://github.com/UW-CTRL/luci-ros2-msgs): Defines ROS2 message types for LUCI.
 - [luci-ros2-transforms](https://github.com/lucimobility/luci-ros2-transforms): Provides transformation utilities for LUCI.
+- [luci-ros2-bringup](https://github.com/UW-CTRL/luci-ros2-bringup): Contains launch files and configurations for LUCI.
 
 ### Build Steps
 1. Navigate to your ROS2 workspace:
