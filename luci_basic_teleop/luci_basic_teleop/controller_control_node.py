@@ -3,7 +3,7 @@ from rclpy.node import Node
 from luci_messages.msg import LuciJoystick
 from sensor_msgs.msg import Joy
 import sys
-from std_msgs.msg import String, Int32
+from std_msgs.msg import String, Int32, Bool
 from std_srvs.srv import Empty
 import signal, time
 from enum import Enum
@@ -33,8 +33,10 @@ class ControllerPublisher(Node):
     def __init__(self):
         super().__init__('controller_control_node')
         self.publisher_ = self.create_publisher(LuciJoystick, 'luci/remote_joystick', 10)
+        self.state_publisher_ = self.create_publisher(String, 'luci/control_state', 10)
+        self.intervention_publisher_ = self.create_publisher(Bool, 'luci/intervention_alert', 10)
         # self.set_auto_input_client = self.create_client(Empty, '/luci/set_auto_remote_input')
-        # self.rm_auto_input_client = self.create_client(Empty, '/luci/remove_auto_remote_input')
+        self.rm_auto_input_client = self.create_client(Empty, '/luci/remove_auto_remote_input')
         self.set_shared_input_client = self.create_client(Empty, '/luci/set_shared_remote_input')
         self.rm_shared_input_client = self.create_client(Empty, '/luci/remove_shared_remote_input')
 
@@ -66,7 +68,6 @@ class ControllerPublisher(Node):
         # Button States
         self.mode = State.IDLE
         self.override_data = 0
-        self.drive_enabled = False
         self.b_button_prev = 0
         self.right_trigger_prev = 0
         self.set_shared_service() #enable shared remote input
@@ -77,11 +78,11 @@ class ControllerPublisher(Node):
     #     future = self.set_auto_input_client.call_async(req)
     #     future.add_done_callback(self.handle_response)
 
-    # def rm_auto_service(self):
-    #     # Call this to disable auto remote input (remote joystick control)
-    #     req = Empty.Request()
-    #     future = self.rm_auto_input_client.call_async(req)
-    #     future.add_done_callback(self.handle_response)
+    def rm_auto_service(self):
+        # Call this to disable auto remote input (remote joystick control)
+        req = Empty.Request()
+        future = self.rm_auto_input_client.call_async(req)
+        future.add_done_callback(self.handle_response)
 
     def set_shared_service(self):
         # Call this to enable auto remote input (remote joystick control)
@@ -116,13 +117,15 @@ class ControllerPublisher(Node):
         #     ControllerPublisher.set_shared_service(self)
     
     def joystick_callback(self, joystick_msg:LuciJoystick):
-        if joystick_msg.joystick_zone != 8:
+        if joystick_msg.joystick_zone != JS_ORIGIN and self.mode != State.OVERRIDE:
+            # ControllerPublisher.rm_shared_service(self)
             self.mode = State.OVERRIDE
             ControllerPublisher.rm_shared_service(self)
-        elif joystick_msg.joystick_zone == 8 and self.mode == State.OVERRIDE:
+        elif joystick_msg.joystick_zone == JS_ORIGIN and self.mode == State.OVERRIDE:
             self.mode = State.IDLE
-            ControllerPublisher.set_shared_service(self)
-        self.get_logger().info('Override: {} Mode: {} joystick_zone: {}'.format(self.override_data, self.mode, joystick_msg.joystick_zone))
+            # ControllerPublisher.set_shared_service(self)
+        # self.get_logger().info('Override: {} Mode: {} joystick_zone: {}'.format(self.override_data, self.mode, joystick_msg.joystick_zone))
+        self.state_publisher_.publish(String(data=f'Mode: {self.mode}'))
 
     
 
@@ -141,6 +144,7 @@ class ControllerPublisher(Node):
         b_button = joy_msg.buttons[1]
 
         if right_trigger and b_button and self.mode != State.CONTROLLED and self.mode == State.IDLE:
+            ControllerPublisher.set_shared_service(self)
             self.mode = State.CONTROLLED
             b_button = 0
             right_trigger = 0

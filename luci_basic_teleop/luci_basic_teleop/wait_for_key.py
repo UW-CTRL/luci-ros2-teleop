@@ -1,4 +1,19 @@
-# https://stackoverflow.com/questions/983354/how-do-i-wait-for-a-pressed-key
+# Copyright 2025 LUCI Mobility, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Adapted from https://stackoverflow.com/questions/983354/how-do-i-wait-for-a-pressed-key
+
 import termios
 import fcntl
 import os
@@ -18,6 +33,9 @@ def read_single_keypress():
     handled.
 
     """
+    fd = sys.stdin.fileno()
+    print("stdin isatty:", os.isatty(fd), "fd:", fd, file=sys.stderr)
+
     fd = sys.stdin.fileno()
     # save old state
     flags_save = fcntl.fcntl(fd, fcntl.F_GETFL)
