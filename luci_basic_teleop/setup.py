@@ -24,7 +24,7 @@ setup(
         'console_scripts': [
             'keyboard_control_node = luci_basic_teleop.keyboard_control_node:main',
             'controller_control_node = luci_basic_teleop.controller_control_node:main',
-            # 'luci_override_node = luci_basic_teleop.luci_override_node:main',
+            'twist_to_luci = <your_package_name>.twist_to_luci_node:main',
         ],
     },
 )
