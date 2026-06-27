@@ -1,21 +1,16 @@
 import rclpy
 from rclpy.node import Node
-from luci_messages.msg import LuciJoystick
+from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Joy
 from std_msgs.msg import String
 from std_srvs.srv import SetBool
-from enum import Enum
-
-UP_KEY_MAX = 100
-LR_KEY_MAX = 100
-JS_FRONT, JS_LEFT, JS_RIGHT, JS_BACK, JS_ORIGIN = 0, 3, 4, 7, 8
-REMOTE = 5
 
 class ControllerPublisher(Node):
     def __init__(self):
         super().__init__('controller_control_node')
         
-        self.publisher_ = self.create_publisher(LuciJoystick, 'luci/remote_joystick', 10)
+        # Publishing to cmd_vel for standard ROS routing
+        self.publisher_ = self.create_publisher(Twist, '/xbox_twist', 10)
         self.mode_client = self.create_client(SetBool, '/luci/request_controlled_mode')
         
         self.state_subscriber = self.create_subscription(
@@ -26,6 +21,10 @@ class ControllerPublisher(Node):
         
         self.current_mode = "IDLE"
         self.last_b_state = 0
+
+        # Safety limits (matching keyboard node)
+        self.max_linear_speed = 0.5  # m/s
+        self.max_angular_speed = 0.4 # rad/s
 
     def state_callback(self, msg):
         self.current_mode = msg.data
@@ -49,30 +48,25 @@ class ControllerPublisher(Node):
 
         # 2. Movement Logic - STRICTLY SILENT IF NOT IN CONTROL
         if self.current_mode == "CONTROLLED":
-            msg = LuciJoystick()
-            msg.input_source = REMOTE
+            twist_msg = Twist()
             
-            fb_val = int(joy_msg.axes[1] * UP_KEY_MAX)
-            lr_val = int(-joy_msg.axes[0] * LR_KEY_MAX)
+            # Map joystick axes directly to Twist velocities.
+            # Assuming standard ROS joy mapping:
+            # axes[1] is Left Stick Up/Down (Forward = positive)
+            # axes[0] is Left Stick Left/Right (Left = positive)
+            twist_msg.linear.x = joy_msg.axes[1] * self.max_linear_speed
+            twist_msg.angular.z = joy_msg.axes[0] * self.max_angular_speed
 
-            msg.forward_back = fb_val
-            msg.left_right = lr_val
-
-            if fb_val > 10: msg.joystick_zone = JS_FRONT
-            elif fb_val < -10: msg.joystick_zone = JS_BACK
-            elif lr_val > 10: msg.joystick_zone = JS_LEFT
-            elif lr_val < -10: msg.joystick_zone = JS_RIGHT
-            else: msg.joystick_zone = JS_ORIGIN
-
-            self.publisher_.publish(msg)
+            self.publisher_.publish(twist_msg)
             
-        # NO ELSE STATEMENT. If not in control, do not fight the passthrough!
 
 def main(args=None):
     rclpy.init(args=args)
     node = ControllerPublisher()
-    try: rclpy.spin(node)
-    except KeyboardInterrupt: pass
+    try: 
+        rclpy.spin(node)
+    except KeyboardInterrupt: 
+        pass
     finally:
         node.request_mode(False)
         node.destroy_node()

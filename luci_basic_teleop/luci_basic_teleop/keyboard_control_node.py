@@ -1,32 +1,11 @@
 import rclpy
 from rclpy.node import Node
-from luci_messages.msg import LuciJoystick
-from std_msgs.msg import String, Int32, Bool
-from std_srvs.srv import Empty
+from geometry_msgs.msg import Twist
+from std_srvs.srv import SetBool
 import sys
 import select
 import termios
 import tty
-from enum import Enum
-
-# Constants
-UP_KEY_MAX = 100
-DOWN_KEY_MAX = -100
-LR_KEY_MAX = 100
-
-JS_FRONT = 0
-JS_LEFT = 3
-JS_RIGHT = 4
-JS_BACK = 7
-JS_ORIGIN = 8
-
-REMOTE = 5
-
-class State(Enum):
-    IDLE = 0
-    CONTROLLED = 1
-    NAV = 2
-    OVERRIDE = 3
 
 # Terminal settings for reading keystrokes
 settings = termios.tcgetattr(sys.stdin)
@@ -44,83 +23,64 @@ def getKey():
 
 class KeyboardPublisher(Node):
     def __init__(self):
-        super().__init__('keyboard_control_node')
-        self.publisher_ = self.create_publisher(LuciJoystick, 'luci/remote_joystick', 10)
-        self.state_publisher_ = self.create_publisher(String, 'luci/control_state', 10)
-        self.intervention_publisher_ = self.create_publisher(Bool, 'luci/intervention_alert', 10)
+        super().__init__('keyboard_teleop_node')
         
-        self.rm_auto_input_client = self.create_client(Empty, '/luci/remove_auto_remote_input')
-        self.set_shared_input_client = self.create_client(Empty, '/luci/set_shared_remote_input')
-        self.rm_shared_input_client = self.create_client(Empty, '/luci/remove_shared_remote_input')
-
-        while not self.set_shared_input_client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info('Waiting for /luci/set_shared_remote_input service...')
+        # Publishing to cmd_vel for standard ROS routing
+        self.publisher_ = self.create_publisher(Twist, '/cmd_vel', 10)
         
-        # Joystick button subscriber 
-        self.joystick_subscriber = self.create_subscription(
-            LuciJoystick,
-            '/luci/joystick_position',
-            self.joystick_callback,
-            10)
+        # Service client to talk to the LuciStateManager
+        self.mode_client = self.create_client(SetBool, '/luci/request_controlled_mode')
         
-        # Override button subscriber 
-        self.override_subscriber = self.create_subscription(
-            Int32,
-            '/luci/override_button_press_count_data',
-            self.override_callback,
-            10)
+        # Safety limits
+        self.linear_speed = 0.5  # m/s
+        self.angular_speed = 0.4 # rad/s
+        self.is_controlled = False
+
+    def toggle_mode(self):
+        if not self.mode_client.wait_for_service(timeout_sec=1.0):
+            print("\n[Error: State Manager service not available! Is it running?]")
+            return
+
+        # Toggle local state
+        self.is_controlled = not self.is_controlled
         
-        # Initial States
-        self.mode = State.IDLE
-        self.override_data = 0
-        self.set_shared_service() #enable shared remote input
+        # Send the request to the State Manager
+        req = SetBool.Request()
+        req.data = self.is_controlled
+        
+        # Use call_async so we don't freeze the keyboard while waiting
+        future = self.mode_client.call_async(req)
+        future.add_done_callback(self.mode_response_callback)
+        
+        state_str = "CONTROLLED" if self.is_controlled else "IDLE"
+        print(f"\n[Requesting Mode Switch to: {state_str}]")
 
-    def rm_auto_service(self):
-        req = Empty.Request()
-        future = self.rm_auto_input_client.call_async(req)
-        future.add_done_callback(self.handle_response)
-
-    def set_shared_service(self):
-        req = Empty.Request()
-        future = self.set_shared_input_client.call_async(req)
-        future.add_done_callback(self.handle_response)
-    
-    def rm_shared_service(self):
-        req = Empty.Request()
-        future = self.rm_shared_input_client.call_async(req)
-        future.add_done_callback(self.handle_response)
-
-    def handle_response(self, future):
+    def mode_response_callback(self, future):
         try:
-            future.result()
-            self.get_logger().info('Service call succeeded!')
+            response = future.result()
+            if response.success:
+                print(f"\n[Success: {response.message}]")
+            else:
+                print(f"\n[Rejected: {response.message}]")
+                # Revert local state if the State Manager rejected us
+                self.is_controlled = not self.is_controlled 
         except Exception as e:
-            self.get_logger().error(f'Service call failed: {e}')
-    
-    def override_callback(self, override_msg:Int32):
-        self.override_data = override_msg.data
-    
-    def joystick_callback(self, joystick_msg:LuciJoystick):
-        if joystick_msg.joystick_zone != JS_ORIGIN and self.mode != State.OVERRIDE:
-            self.mode = State.OVERRIDE
-            self.rm_shared_service()
-        elif joystick_msg.joystick_zone == JS_ORIGIN and self.mode == State.OVERRIDE:
-            self.mode = State.IDLE
-        self.state_publisher_.publish(String(data=f'Mode: {self.mode}'))
+            print(f"\n[Service call failed: {e}]")
+            self.is_controlled = not self.is_controlled
 
 def main(args=None):
     rclpy.init(args=args)
-    keyboard_publisher = KeyboardPublisher()
+    node = KeyboardPublisher()
     
     msg = """
     ---------------------------
-    LUCI Keyboard Teleop Node
+    Standard Twist Keyboard Teleop
     ---------------------------
     Controls:
       W : Forward
       S : Backward
-      A : Left
-      D : Right
+      A : Turn Left
+      D : Turn Right
       T : Toggle CONTROLLED / IDLE Mode
       
       CTRL-C to quit
@@ -132,72 +92,47 @@ def main(args=None):
         while rclpy.ok():
             key = getKey()
             
-            # 1. Handle Mode Toggle (Replaces Right Trigger + B Button)
-            if key.lower() == 't':
-                if keyboard_publisher.mode == State.IDLE:
-                    keyboard_publisher.set_shared_service()
-                    keyboard_publisher.mode = State.CONTROLLED
-                    print("\n[Mode Switched to CONTROLLED]")
-                elif keyboard_publisher.mode == State.CONTROLLED:
-                    keyboard_publisher.mode = State.IDLE
-                    print("\n[Mode Switched to IDLE]")
-
-            # 2. Handle Ctrl-C termination
+            # Handle Ctrl-C termination
             if key == '\x03':
                 break
 
-            # 3. Create and populate Joystick Message
-            joy_msg = LuciJoystick()
-            joy_msg.input_source = REMOTE
-            
-            forward_back_val = 0
-            left_right_val = 0
+            # Handle Mode Toggle
+            if key.lower() == 't':
+                node.toggle_mode()
 
-            # Only allow movement if in CONTROLLED state
-            if keyboard_publisher.mode == State.CONTROLLED:
+            # Create a blank Twist message (defaults all values to 0.0)
+            twist_msg = Twist()
+
+            # Map keys to standard velocities ONLY if we are in CONTROLLED mode
+            if node.is_controlled:
                 if key.lower() == 'w':
-                    forward_back_val = UP_KEY_MAX
+                    twist_msg.linear.x = node.linear_speed
                 elif key.lower() == 's':
-                    forward_back_val = DOWN_KEY_MAX
+                    twist_msg.linear.x = -node.linear_speed
                 elif key.lower() == 'a':
-                    left_right_val = LR_KEY_MAX
+                    twist_msg.angular.z = node.angular_speed
                 elif key.lower() == 'd':
-                    left_right_val = -LR_KEY_MAX
+                    twist_msg.angular.z = -node.angular_speed
 
-                joy_msg.forward_back = forward_back_val
-                joy_msg.left_right = left_right_val
+            # Always publish. If not controlled or no key pressed, it publishes 0.0
+            node.publisher_.publish(twist_msg)
 
-                # Determine Joystick Zone
-                if joy_msg.forward_back > 10:
-                    joy_msg.joystick_zone = JS_FRONT
-                elif joy_msg.forward_back < -10:
-                    joy_msg.joystick_zone = JS_BACK
-                elif joy_msg.left_right < 10 and joy_msg.left_right != 0: 
-                    # Assuming negative is left based on your original logic. 
-                    # Adjust if your robot maps positive to left!
-                    joy_msg.joystick_zone = JS_RIGHT
-                elif joy_msg.left_right > -10 and joy_msg.left_right != 0:
-                    joy_msg.joystick_zone = JS_LEFT
-                else:
-                    joy_msg.joystick_zone = JS_ORIGIN
-            else:
-                # If not controlled, zero out everything
-                joy_msg.forward_back = 0
-                joy_msg.left_right = 0
-                joy_msg.joystick_zone = JS_ORIGIN
-
-            # Publish the message
-            keyboard_publisher.publisher_.publish(joy_msg)
-
-            # Spin once to process incoming callbacks (override, joystick position, services)
-            rclpy.spin_once(keyboard_publisher, timeout_sec=0)
+            # Spin once to process incoming service responses
+            rclpy.spin_once(node, timeout_sec=0)
 
     except Exception as e:
         print(f"Error: {e}")
     finally:
+        # Restore terminal settings
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
-        keyboard_publisher.rm_shared_service()
-        keyboard_publisher.destroy_node()
+        
+        # Try to drop to IDLE before shutting down for safety
+        if node.is_controlled and node.mode_client.wait_for_service(timeout_sec=0.5):
+            req = SetBool.Request()
+            req.data = False
+            node.mode_client.call_async(req)
+            
+        node.destroy_node()
         rclpy.shutdown()
 
 if __name__ == '__main__':
