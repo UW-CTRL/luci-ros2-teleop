@@ -20,8 +20,8 @@ def generate_launch_description():
     )
     teleop_node = Node(
                         package='luci_basic_teleop',
-                        executable='controller_control_node',
-                        name='controller_node',
+                        executable='xbox_teleop_node',
+                        name='xbox_teleop_node',
                         )
     joy_node = Node(
                     package='joy',

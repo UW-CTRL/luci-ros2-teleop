@@ -22,8 +22,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'keyboard_control_node = luci_basic_teleop.keyboard_control_node:main',
-            'controller_control_node = luci_basic_teleop.controller_control_node:main',
+            'keyboard_teleop_node = luci_basic_teleop.keyboard_teleop_node:main',
+            'xbox_teleop_node = luci_basic_teleop.xbox_teleop_node:main',
             'luci_override_node = luci_basic_teleop.luci_override_node:main',
         ],
     },

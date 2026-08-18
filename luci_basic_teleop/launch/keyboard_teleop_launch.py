@@ -20,8 +20,8 @@ def generate_launch_description():
     )
     teleop_node = Node(
                         package='luci_basic_teleop',
-                        executable='keyboard_control_node',
-                        name='keyboard_node',
+                        executable='keyboard_teleop_node',
+                        name='keyboard_teleop_node',
                         )
 
     return LaunchDescription([
