@@ -1,25 +1,30 @@
 # LUCI Basic Teleop Package
 
-The `luci_basic_teleop` package provides functionality to control LUCI, a robotic wheelchair, using either a keyboard or an Xbox controller. This package publishes joystick commands to LUCI and is designed to work on Linux-based systems. It has been tested within the LUCI Docker container and is compatible with the [luci_ros2_sdk](https://github.com/lucimobility/luci-ros2-sdk).
+The `luci_basic_teleop` package provides user input drivers for controlling LUCI using an Xbox controller or keyboard. This package translates gamepad events into standardized `LuciJoystick` messages published to the central command multiplexer.
 
+It is designed for Linux-based ROS 2 environments (Humble / Jazzy) and works in tandem with `luci_core_control`.
 
-### Xbox Teleop Node (`xbox_teleop_node.py`)
-Translates raw Linux joystick driver events (`/joy`) into `LuciJoystick` formatted commands for manual remote control.
-
-* **Subscribed Topics:**
-  * `/joy` (`sensor_msgs/msg/Joy`) — Raw gamepad axis and button events.
-  * `/luci/control_state` (`std_msgs/msg/String`) — Monitors global state.
-  * `/luci/joystick_position` (`luci_messages/msg/LuciJoystick`) — Monitors physical joystick activity.
-  * `/luci/override_button_press_count_data` (`std_msgs/msg/Int32`) — Override button monitoring.
-* **Published Topics:**
-  * `/luci/remote_joystick` (`luci_messages/msg/LuciJoystick`) — Scaled gamepad control commands.
-* **Behavior:**
-  * If `current_state != 'TELEOP'`, zeroed joystick commands (`forward_back = 0`, `left_right = 0`) are published to guarantee safe stopping when teleoperation is disengaged.
-
-**TODO:** Update keyboard teleop.
-
+TODO: add keyboard documentation.
 
 ---
 
-## Quickstart & Execution
-`ros2 launch luci_basic_teleop xbox_teleop_launch.py`
+## Node Documentation
+
+### Xbox Teleop Node (`xbox_teleop_node.py`)
+Reads Linux gamepad events on `/joy` and converts stick deflections into scaled percentage values (`-100` to `100`) and directional zones (`JS_FRONT`, `JS_BACK`, `JS_LEFT`, `JS_RIGHT`, `JS_ORIGIN`).
+
+* **Subscribed Topics:**
+  * `/joy` (`sensor_msgs/msg/Joy`) — Raw gamepad axis and button events.
+* **Published Topics:**
+  * `/xbox` (`luci_messages/msg/LuciJoystick`) — Scaled gamepad commands for `CentralController`.
+
+---
+
+## Gamepad Controls
+
+| Control | Action / Mapping |
+| :--- | :--- |
+| **A Button** (`buttons[0]`) | Transitions system state from **`IDLE` $\rightarrow$ `TELEOP`** |
+| **B Button** (`buttons[1]`) | Transitions system state from **`TELEOP` $\rightarrow$ `IDLE`** |
+| **Left Stick (Vertical)** | Controls forward/backward velocity percentage (`-100` to `100`) |
+| **Left Stick (Horizontal)** | Controls left/right turning percentage (`-100` to `100`) |
