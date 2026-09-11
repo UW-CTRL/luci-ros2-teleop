@@ -6,6 +6,7 @@ from luci_basic_teleop.wait_for_key import read_single_keypress
 import sys
 from std_msgs.msg import String
 from std_srvs.srv import Empty
+from sensor_msgs.msg import Joy
 import signal, time
 
 
@@ -74,6 +75,7 @@ class KeyboardPublisher(Node):
 
         self.publisher_ = self.create_publisher(LuciJoystick, 'luci/remote_joystick', 10)
         self.cmd_vel_publisher_ = self.create_publisher(Twist, 'cmd_vel', 10)
+        self.joy_publisher_ = self.create_publisher(Joy, '/joy', 10)
         self.set_auto_input_client = self.create_client(Empty, '/luci/set_auto_remote_input')
         self.rm_auto_input_client = self.create_client(Empty, '/luci/remove_auto_remote_input')
         while not self.set_auto_input_client.wait_for_service(timeout_sec=1.0):
@@ -113,6 +115,29 @@ class KeyboardPublisher(Node):
         except Exception as e:
             self.get_logger().error(f'Service call failed: {e}')
 
+    def publish_motion(self, msg, dir_char):
+        if self.use_cmd_vel:
+            twist_msg = Twist()
+            twist_msg.linear.x = (msg.forward_back / float(UP_KEY_MAX)) * self.max_linear_speed
+            twist_msg.angular.z = (-msg.left_right / float(LR_KEY_MAX)) * self.max_angular_speed
+            self.cmd_vel_publisher_.publish(twist_msg)
+            self.request_autonav(True)
+            self.get_logger().info('dir: {} js_zone:{}| Publishing to /cmd_vel: linear.x={} angular.z={}'.format(dir_char, msg.joystick_zone, twist_msg.linear.x, twist_msg.angular.z))
+        else:
+            self.publisher_.publish(msg)
+            self.get_logger().info('dir: {} js_zone:{}| Publishing to /luci/remote_joystick: forward_back={} left_right={}'.format(dir_char, msg.joystick_zone, msg.forward_back, msg.left_right))
+
+    def request_autonav(self, enable):
+        joy = Joy()
+        joy.header.stamp = self.get_clock().now().to_msg()
+        joy.axes = [0.0] * 8
+        joy.buttons = [0] * 12
+        if enable:
+            joy.buttons[2] = 1
+        else:
+            joy.buttons[1] = 1
+        self.joy_publisher_.publish(joy)
+    
     def timer_callback(self):
         msg = LuciJoystick()
         msg.input_source = REMOTE
@@ -189,8 +214,7 @@ class KeyboardPublisher(Node):
             msg.joystick_zone = JS_ORIGIN
 
         # Publish joystick commands
-        self.publisher_.publish(msg)
-        self.get_logger().info('dir: {} js_zone:{}| Publishing: {} {}'.format(dir_char, msg.joystick_zone, msg.forward_back, msg.left_right))
+        self.publish_motion(msg, dir_char)
 
 def main(args=None):
     rclpy.init(args=args)
@@ -201,7 +225,10 @@ def main(args=None):
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
     # when the garbage collector destroys the node object)
-    keyboard_publisher.rm_auto_service()
+    if keyboard_publisher.use_cmd_vel:
+        keyboard_publisher.request_autonav(False)
+    else:
+        keyboard_publisher.rm_auto_service()
     keyboard_publisher.destroy_node()
     rclpy.shutdown()
 
