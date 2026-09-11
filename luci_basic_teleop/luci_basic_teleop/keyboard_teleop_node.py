@@ -1,5 +1,6 @@
 import rclpy
 from rclpy.node import Node
+from geometry_msgs.msg import Twist
 from luci_messages.msg import LuciJoystick
 from luci_basic_teleop.wait_for_key import read_single_keypress
 import sys
@@ -62,7 +63,17 @@ class KeyboardPublisher(Node):
 
     def __init__(self):
         super().__init__('keyboard_control_node')
+
+        self.declare_parameter('use_cmd_vel', False)
+        self.declare_parameter('max_linear_speed', 0.5)
+        self.declare_parameter('max_angular_speed', 0.9*0.44704/0.4699)
+
+        self.use_cmd_vel = self.as_bool(self.get_parameter('use_cmd_vel').value)
+        self.max_linear_speed = float(self.get_parameter('max_linear_speed').value)
+        self.max_angular_speed = float(self.get_parameter('max_angular_speed').value)
+
         self.publisher_ = self.create_publisher(LuciJoystick, 'luci/remote_joystick', 10)
+        self.cmd_vel_publisher_ = self.create_publisher(Twist, 'cmd_vel', 10)
         self.set_auto_input_client = self.create_client(Empty, '/luci/set_auto_remote_input')
         self.rm_auto_input_client = self.create_client(Empty, '/luci/remove_auto_remote_input')
         while not self.set_auto_input_client.wait_for_service(timeout_sec=1.0):
@@ -71,6 +82,16 @@ class KeyboardPublisher(Node):
         self.set_auto_service() #enable auto remote input
         timer_period = 0.05  # Rate at which to send joystick commands in seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
+
+        if self.use_cmd_vel:
+            self.get_logger().info('Keyboard control node started. Publishing to /cmd_vel and entering AUTONAV mode.')
+        else:
+            self.get_logger().info('Keyboard control node started. Publishing to /luci/remote_joystick and entering TELEOP mode.')
+
+    def as_bool(self, value):
+        if isinstance(value, str):
+            return value.lower() in ('true', '1', 'yes')
+        return bool(value)
 
     def set_auto_service(self):
         # Call this to enable auto remote input (remote joystick control)
